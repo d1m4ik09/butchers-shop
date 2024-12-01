@@ -2,11 +2,24 @@ import telebot
 from telebot import types
 from dotenv import load_dotenv
 import os
+import random
 
 load_dotenv()
 bot = telebot.TeleBot(os.getenv("TOKEN"))
 
 orders = {}
+del_orders = {}
+stat = {
+    "🍔Чизбургер|3H": 0,
+    "🍔Классика|4H": 0,
+    "🍔Двойной|5H": 0,
+    "🍟Соль|1H": 0,
+    "🍟Сметана и зелень|1H": 0,
+    "🍗Тушенка|2H" : 0,
+    "🥤Кола|1H": 0,
+    "🥤Липтон|1H": 0,
+    "🥤Яблочный сок|1H": 0
+}
 prices = {
     "🍔Чизбургер|3H": 3,
     "🍔Классика|4H": 4,
@@ -38,7 +51,6 @@ def start(message):
 
 @bot.message_handler(content_types=['text'])
 def on_click(message):
-
     if message.text == "🛒Касса":
         markup = types.ReplyKeyboardMarkup()
 
@@ -63,7 +75,14 @@ def on_click(message):
         
         bot.send_message(message.chat.id, "Выберите позиции из кнопок и нажмите '✅Я сделал заказ'", reply_markup=markup)
 
+    if message.text == "🚚Доставка":
+        bot.send_message(message.chat.id, "Напишите номер телефона")
+        bot.register_next_step_handler(delivery_fun, message)
+
     if message.text in menu:
+        if message.chat.id == '':
+            pass
+            
         orders[message.chat.id]["order"] += f"{message.text} "
         orders[message.chat.id]["price"] += prices[message.text]
         print(orders)
@@ -106,7 +125,33 @@ def get_name(message):
     bot.send_message(message.chat.id, "Напишите номер стола, к которому мы отнесем ваш заказ.")
     bot.register_next_step_handler(message, get_table_number)
     
+def delivery_fun(message):
+    global del_orders 
+    markup = types.ReplyKeyboardMarkup()
 
+    cheese = types.KeyboardButton(menu[0])
+    classic = types.KeyboardButton(menu[1])
+    double = types.KeyboardButton(menu[2])
+    
+    snack1 = types.KeyboardButton(menu[3])
+    snack2 = types.KeyboardButton(menu[4])
+    snack3 = types.KeyboardButton(menu[5])
+    
+    drink1 = types.KeyboardButton(menu[6])
+    drink2 = types.KeyboardButton(menu[7])
+    drink3 = types.KeyboardButton(menu[8])
+
+    ready_order = types.KeyboardButton("✅Готово")
+
+    markup.row(cheese, classic, double)
+    markup.row(drink1, drink2, drink3)
+    markup.row(snack1, snack2, snack3)
+    markup.row(ready_order)
+    
+    bot.send_message(message.chat.id, "Выберите позиции из кнопок и нажмите '✅Я сделал заказ'", reply_markup=markup)
+    
+    del_orders[message.text] = {}
+    bot
 
 def get_table_number(message):
     global orders
