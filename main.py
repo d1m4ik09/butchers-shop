@@ -2,22 +2,24 @@ import telebot
 from telebot import types
 from dotenv import load_dotenv
 import os
+import psutil
 
 load_dotenv()
 bot = telebot.TeleBot(os.getenv("TOKEN"))
 
 
-# stat = {
-#     "🍔Чизбургер|3H": 0,
-#     "🍔Классика|4H": 0,
-#     "🍔Двойной|5H": 0,
-#     "🍟Соль|1H": 0,
-#     "🍟Сметана и зелень|1H": 0,
-#     "🍗Тушенка|2H" : 0,
-#     "🥤Кола|1H": 0,
-#     "🥤Липтон|1H": 0,
-#     "🥤Яблочный сок|1H": 0
-# }
+stat = {
+    "🍔Чизбургер|3H": 0,
+    "🍔Классика|4H": 0,
+    "🍔Двойной|5H": 0,
+    "🍟Соль|1H": 0,
+    "🍟Сметана и зелень|1H": 0,
+    "🍗Тушенка|2H" : 0,
+    "🥤Кола|1H": 0,
+    "🥤Липтон|1H": 0,
+    "🥤Яблочный сок|1H": 0,
+    "price" : 0
+}
 
 orders = {}
 prices = {
@@ -33,14 +35,9 @@ prices = {
 }
 menu = ["🍔Чизбургер|3H", "🍔Классика|4H", "🍔Двойной|5H", "🍟Соль|1H", "🍟Сметана и зелень|1H", "🍗Тушенка|2H", "🥤Кола|1H", "🥤Липтон|1H", "🥤Яблочный сок|1H"]
 
-delivery = {
-    True: "🚚Доставка",
-    False: "🛒Касса"
-}
-
 @bot.message_handler(commands=['start'])
 def start(message):
-    orders[message.chat.id] = {"order": "", "price": 0, "delivery": ""} 
+    orders[message.chat.id] = {"order": [], "price": 0, "delivery": ""} 
     
     markup = types.ReplyKeyboardMarkup()
     
@@ -49,7 +46,26 @@ def start(message):
 
     markup.row(store_make_order, delivery_make_order)
     bot.send_message(message.chat.id, "Выбери способ заказа", reply_markup=markup)
-    bot.register_next_step_handler(message, on_click)
+
+@bot.message_handler(commands=["stat"])
+def statistics(message):
+    print(stat)
+
+@bot.message_handler(commands=["clearstatdata"])
+def clear(message):
+    global stat
+    stat = {
+        "🍔Чизбургер|3H": 0,
+        "🍔Классика|4H": 0,
+        "🍔Двойной|5H": 0,
+        "🍟Соль|1H": 0,
+        "🍟Сметана и зелень|1H": 0,
+        "🍗Тушенка|2H" : 0,
+        "🥤Кола|1H": 0,
+        "🥤Липтон|1H": 0,
+        "🥤Яблочный сок|1H": 0
+    }
+    bot.send_message(message.chat.id, "Статистика очищена")
 
 
 @bot.message_handler(content_types=['text'])
@@ -108,39 +124,55 @@ def on_click(message):
         bot.send_message(message.chat.id, "Выберите позиции из кнопок и нажмите '✅Готово'", reply_markup=markup)    
 
     if message.text in menu:
-        orders[message.chat.id]["order"] += f"{message.text} "
+        orders[message.chat.id]["order"].append(message.text)
         orders[message.chat.id]["price"] += prices[message.text]
-        # print(orders)
+        print(orders)
 
     if message.text == "✅Готово":
         bot.send_message(message.chat.id, 'Напишите имя')
         bot.register_next_step_handler(message, get_name)
 
     if message.text == "❌Отменить заказ":
-        orders[message.chat.id] = {}
+        orders[message.chat.id] = {"order": [], "price": 0, "delivery": ""}
 
         markup = types.ReplyKeyboardMarkup()
-    
+
         store_make_order = types.KeyboardButton("🛒Касса")
         delivery_make_order = types.KeyboardButton("🚚Доставка")
 
         markup.row(store_make_order, delivery_make_order)
         bot.send_message(message.chat.id, "Выбери способ заказа", reply_markup=markup)
-        bot.register_next_step_handler(message, on_click)
 
-    if message.text == '✅Подтвердить заказ' :    
+    if message.text == '✅Подтвердить заказ' :
+        global stat
+
         markup = types.InlineKeyboardMarkup()
 
         btn1 = types.InlineKeyboardButton('Заказ готов', callback_data="cooking")
         
         markup.add(btn1)
+
+        for item in orders[message.chat.id]["order"]:
+            stat[item] += 1
+
+        stat["price"] += orders[message.chat.id]["price"]
         
         if orders[message.chat.id]["delivery"] == False:
-            bot.send_message("-4729706765", f"Имя: {orders[message.chat.id]["name"]}\nВаш заказ:\n{orders[message.chat.id]["order"].split()}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу", reply_markup=markup)
-            orders[message.message_id]
-        else:
-            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"].split()}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на доставку')
+            bot.send_message("-4729706765", f"Имя: {orders[message.chat.id]["name"]}\nВаш заказ:\n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу", reply_markup=markup)
 
+        else:
+            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку')
+
+        markup = types.ReplyKeyboardMarkup()
+
+        orders[message.chat.id] = {"order": [], "price": 0, "delivery": ""}
+
+        store_make_order = types.KeyboardButton("🛒Касса")
+        delivery_make_order = types.KeyboardButton("🚚Доставка")
+
+        markup.row(store_make_order, delivery_make_order)
+        bot.send_message(message.chat.id, "Выбери способ заказа", reply_markup=markup)
+        
        
 @bot.message_handler()
 def get_name(message):
@@ -158,8 +190,8 @@ def get_name(message):
         cancel = types.KeyboardButton("❌Отменить заказ")
         
         markup.row(send, cancel)
-
-        bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"].split()}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу')
+        
+        bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу')
         bot.send_message(message.chat.id, "Проверьте ваш заказ и нажмите '✅Подтвердить заказ', если вы допустили ошибку, нажмите '❌Отменить заказ'", reply_markup=markup)
         
 def get_table_number(message):
@@ -183,16 +215,8 @@ def get_table_name(message):
 
     markup.row(send, cancel)
     
-    bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"].split()}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу\n')
+    bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку')
     bot.send_message(message.chat.id, "Проверьте ваш заказ и нажмите '✅Подтвердить заказ', если вы допустили ошибку, нажмите '❌Отменить заказ'", reply_markup=markup)
-
-@bot.message_handler()
-def send_order(message):
-    count = 0
-
-    for item in orders[message.chat.id]:
-        count += prices[item]
-    
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
