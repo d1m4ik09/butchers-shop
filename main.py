@@ -2,7 +2,6 @@ import telebot
 from telebot import types
 from dotenv import load_dotenv
 import os
-import psutil
 
 load_dotenv()
 bot = telebot.TeleBot(os.getenv("TOKEN"))
@@ -63,7 +62,8 @@ def clear(message):
         "🍗Тушенка|2H" : 0,
         "🥤Кола|1H": 0,
         "🥤Липтон|1H": 0,
-        "🥤Яблочный сок|1H": 0
+        "🥤Яблочный сок|1H": 0,
+        "price" : 0
     }
     bot.send_message(message.chat.id, "Статистика очищена")
 
@@ -148,7 +148,7 @@ def on_click(message):
 
         markup = types.InlineKeyboardMarkup()
 
-        btn1 = types.InlineKeyboardButton('Заказ готов', callback_data="cooking")
+        btn1 = types.InlineKeyboardButton('Заказ готов', callback_data="ready")
         
         markup.add(btn1)
 
@@ -161,7 +161,7 @@ def on_click(message):
             bot.send_message("-4729706765", f"Имя: {orders[message.chat.id]["name"]}\nВаш заказ:\n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу", reply_markup=markup)
 
         else:
-            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку')
+            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку', reply_markup=markup)
 
         markup = types.ReplyKeyboardMarkup()
 
@@ -220,8 +220,17 @@ def get_table_name(message):
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
-    if callback.data == "cooking":
-        pass
+    if callback.data == "ready":
+        markup = types.InlineKeyboardMarkup()
+        btn1 = types.InlineKeyboardButton("Отнес заказ на точку", callback_data="delivered")
+
+        markup.row(btn1)
+
+        bot.send_message("-4649840888", callback.message.text, reply_markup=markup)
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+
+    if callback.data == "delivered":
+        bot.edit_message_text(callback.message.chat.id, callback.message.message_id, text="✅Заказ доставлен")
 
 
 bot.infinity_polling()
