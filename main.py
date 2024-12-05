@@ -158,10 +158,10 @@ def on_click(message):
         stat["price"] += orders[message.chat.id]["price"]
         
         if orders[message.chat.id]["delivery"] == False:
-            bot.send_message("-4729706765", f"Имя: {orders[message.chat.id]["name"]}\nВаш заказ:\n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу", reply_markup=markup)
+            bot.send_message("-4729706765", f"Имя: {orders[message.chat.id]["name"]}\nВаш заказ:\n{'\n'.join(sorted(orders[message.chat.id]["order"]))}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу", reply_markup=markup)
 
         else:
-            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку', reply_markup=markup)
+            bot.send_message("-4729706765", f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{'\n'.join(sorted(orders[message.chat.id]["order"]))}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку', reply_markup=markup)
 
         markup = types.ReplyKeyboardMarkup()
 
@@ -191,7 +191,7 @@ def get_name(message):
         
         markup.row(send, cancel)
         
-        bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу')
+        bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\n\nВаш заказ: \n{'\n'.join(sorted(orders[message.chat.id]["order"]))}\n\nСумма заказа: {orders[message.chat.id]["price"]}H\n\nЗаказ на кассу')
         bot.send_message(message.chat.id, "Проверьте ваш заказ и нажмите '✅Подтвердить заказ', если вы допустили ошибку, нажмите '❌Отменить заказ'", reply_markup=markup)
         
 def get_table_number(message):
@@ -215,22 +215,32 @@ def get_table_name(message):
 
     markup.row(send, cancel)
     
-    bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{orders[message.chat.id]["order"]}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку')
+    bot.send_message(message.chat.id, f'Имя: {orders[message.chat.id]["name"]}\nНомер стола: {orders[message.chat.id]["table_number"]}\nТелефон: {orders[message.chat.id]["phone"]}\nНазвание старт-апа: {orders[message.chat.id]["table_name"]}\n\nВаш заказ: \n{'\n'.join(sorted(orders[message.chat.id]["order"]))}\n\nСумма заказа: {orders[message.chat.id]["price"]}H + 1H(за доставку)\nИтого: {orders[message.chat.id]["price"] + 1}H\n\nЗаказ на доставку')
     bot.send_message(message.chat.id, "Проверьте ваш заказ и нажмите '✅Подтвердить заказ', если вы допустили ошибку, нажмите '❌Отменить заказ'", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
     if callback.data == "ready":
         markup = types.InlineKeyboardMarkup()
-        btn1 = types.InlineKeyboardButton("Отнес заказ на точку", callback_data="delivered")
+        btn1 = types.InlineKeyboardButton('Взял заказ', callback_data= 'taken')
 
         markup.row(btn1)
 
         bot.send_message("-4649840888", callback.message.text, reply_markup=markup)
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
 
+    if callback.data == 'taken':
+        markup = types.InlineKeyboardMarkup()
+        btn1 = types.InlineKeyboardButton("Отнес заказ на точку", callback_data="delivered")
+
+        markup.row(btn1)
+        
+        bot.edit_message_text(f"{callback.message.text}\n\n✅Заказ взят", callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+
+   
     if callback.data == "delivered":
-        bot.edit_message_text(callback.message.chat.id, callback.message.message_id, text="✅Заказ доставлен")
+        bot.edit_message_text(f"{callback.message.text}\n\n✅Заказ доставлен", callback.message.chat.id, callback.message.message_id)
+        bot.edit_message_reply_markup(callback.message.chat.id, callback.message.message_id, reply_markup='')
 
-
+        
 bot.infinity_polling()
